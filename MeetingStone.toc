@@ -1,0 +1,13 @@
+## Interface: 120005
+## Version: 1.0.0
+## VersionDate: 20260525
+## Title: Meeting Stone - Mashiro
+## Title-zhCN: 集合石 真白版
+## Title-zhTW: 集合石 真白版
+## SavedVariables: MEETINGSTONE_UI_DB,MEETINGSTONE_UI_E_POINTS
+## SavedVariablesPerCharacter: MEETINGSTONE_CHARACTER_DB
+## LoadManagers: AddonLoader
+## X-LoadOn-Always: delayed
+## IconTexture: Interface\AddOns\MeetingStone\Media\Logo
+
+Load.xml

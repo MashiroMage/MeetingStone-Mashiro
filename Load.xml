@@ -1,0 +1,42 @@
+<Ui xmlns:xsi="" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\FrameXML\UI.xsd">
+    <!-- ====== Infrastructure ====== -->
+    <Include file="Libs\Embeds.xml"/>
+    <Include file="Localization\Localization.xml"/>
+
+    <!-- ====== Static Data (no Addon dependency, loaded early) ====== -->
+    <Script file="Data\Custom.lua"/>  <!-- Static game data tables (must load before Constants.lua) -->
+    <Script file="Data\Constants.lua"/>    <!-- Addon config constants (applies setmetatable to Custom.lua tables) -->
+
+    <!-- ====== Utility / Cross-cutting ====== -->
+    <Script file="Core\Memorize.lua"/> <!-- Memoization helper -->
+    <Script file="Core\Throttle.lua"/>  <!-- Request throttling helper -->
+    <Script file="Core\API.lua"/>      <!-- Shared utilities (player, activity, serialization, UI hooks) -->
+    <Script file="Core\Hooks.lua"/>    <!-- LFG UI hooks: class/spec icon replacement (InitMeetingStoneClass) -->
+
+    <Script file="Data\AppData.lua"/> <!-- Static app data tables (depends on ListToMap from API.lua) -->
+
+    <!-- ====== Addon Initialization ====== -->
+    <Script file="Core\Main.lua"/>
+    <Script file="Core\Profile.lua"/> <!-- SavedVariables / user settings -->
+
+    <!-- ====== Data Layer (model classes, requires Addon) ====== -->
+    <Include file="Data\Data.xml"/>
+
+    <!-- ====== Service Layer (business logic) ====== -->
+    <Include file="Service\Service.xml"/>
+
+    <!-- ====== UI Layer (presentation) ====== -->
+    <Include file="Widget\Widget.xml"/>
+    <Include file="Module\Module.xml"/>
+
+    <!-- ====== System & Extensions ====== -->
+    <Script file="Core\System.lua"/>
+    <Include file="Core\Bindings.xml"/>
+    <Include file="Skin\Skin.xml"/>
+
+    <!-- ====== Late-loading: depend on both Service and Module layers ====== -->
+    <Script file="Widget\CheckBox.lua"/>      <!-- Used by BrowseFilterUI -->
+    <Script file="Service\BrowseFilter.lua"/> <!-- Depends on BrowsePanel, LfgService -->
+    <Script file="Widget\BrowseFilterUI.lua"/> <!-- Depends on BrowseFilter, BrowsePanel -->
+</Ui>
