@@ -6,6 +6,11 @@ local LfgService = Addon:GetModule('LfgService')
 
 local Dungeons
 
+-- 嗜血/英勇职业（本地过滤用）
+local BLOODLUST_CLASSES = { MAGE=true, HUNTER=true, DEMONHUNTER=true, SHAMAN=true }
+-- 战斗复活职业（本地过滤用）
+local BREZ_CLASSES = { PALADIN=true, DEATHKNIGHT=true, DRUID=true, WARLOCK=true }
+
 -- 判断数组是否包含某值，返回 found, index
 local function containsValue(array, value)
     for i, v in ipairs(array) do
@@ -109,9 +114,8 @@ function BrowseFilter:OnInitialize()
 
     -- 职责过滤
     local function CheckJobsFilter(data, tcount, hcount, dcount, activity, isSeasonDungeon)
-        local enabled = C_LFGList.GetAdvancedFilter()
-        local isDungeon = activity and containsValue(enabled.activities, activity:GetGroupID()) or #enabled.activities == 0 or false
-        if isSeasonDungeon and isDungeon then
+        if isSeasonDungeon then
+            -- M+ 模式：使用本地 state 键，无过滤时全部通过
             if MEETINGSTONE_UI_DB.FILTER_SAME_CLASS then
                 local _, myclass = UnitClass('player')
                 for i = 1, activity:GetNumMembers() do
@@ -119,27 +123,20 @@ function BrowseFilter:OnInitialize()
                     if class == myclass then return false end
                 end
             end
-            return (not enabled.needsHealer and not enabled.needsDamage
-                    or (enabled.needsHealer and data.HEALER < hcount)
-                    or (enabled.needsDamage and data.DAMAGER < dcount))
-                and (not enabled.hasTank or data.TANK >= tcount)
-                and (not enabled.needsTank or data.TANK < tcount)
-                and (not enabled.hasHealer or data.HEALER >= hcount)
-                and (not enabled.needsHealer or data.HEALER < hcount)
-                or false
+            local tankState = MEETINGSTONE_UI_DB.FILTER_TANK_STATE
+            local healState = MEETINGSTONE_UI_DB.FILTER_HEALER_STATE
+            if tankState == 'has'   and data.TANK   <  tcount then return false end
+            if tankState == 'needs' and data.TANK   >= tcount then return false end
+            if healState == 'has'   and data.HEALER <  hcount then return false end
+            if healState == 'needs' and data.HEALER >= hcount then return false end
+            if MEETINGSTONE_UI_DB.FILTER_DAMAGE_MPLUS and data.DAMAGER >= dcount then return false end
+            return true
         else
-            if MEETINGSTONE_UI_DB.FILTER_MULTY then
-                return (not MEETINGSTONE_UI_DB.FILTER_TANK and not MEETINGSTONE_UI_DB.FILTER_HEALTH and not MEETINGSTONE_UI_DB.FILTER_DAMAGE)
-                    or (MEETINGSTONE_UI_DB.FILTER_TANK and data.TANK < tcount)
-                    or (MEETINGSTONE_UI_DB.FILTER_HEALTH and data.HEALER < hcount)
-                    or (MEETINGSTONE_UI_DB.FILTER_DAMAGE and data.DAMAGER < dcount)
-                    or false
-            else
-                return (not MEETINGSTONE_UI_DB.FILTER_TANK or data.TANK < tcount)
-                    and (not MEETINGSTONE_UI_DB.FILTER_HEALTH or data.HEALER < hcount)
-                    and (not MEETINGSTONE_UI_DB.FILTER_DAMAGE or data.DAMAGER < dcount)
-                    or false
-            end
+            -- 非 M+ 模式：使用原来的 bool 键
+            return (not MEETINGSTONE_UI_DB.FILTER_TANK or data.TANK < tcount)
+                and (not MEETINGSTONE_UI_DB.FILTER_HEALTH or data.HEALER < hcount)
+                and (not MEETINGSTONE_UI_DB.FILTER_DAMAGE or data.DAMAGER < dcount)
+                or false
         end
     end
 
@@ -181,7 +178,7 @@ function BrowseFilter:OnInitialize()
         local data = C_LFGList.GetSearchResultMemberCounts(activity:GetID())
         if data then
             local activityItem = BrowsePanel.ActivityDropdown:GetItem()
-            if not activityItem then return end
+            if not activityItem then return true end
 
             local categoryId = activityItem.categoryId
             local activityId = activityItem.activityId
@@ -241,9 +238,14 @@ function BrowseFilter:OnInitialize()
             if not BrowsePanel.MDSearchs[activity:GetName()] then return false end
         end
 
+        local hasBloodlust, hasBrez = false, false
         for i = 1, activity:GetNumMembers() do
             local _, classFile, _, specLocalized = LfgService:GetSearchResultMemberInfo(activity:GetID(), i)
-            if specLocalized == '初始' then return false end
+            if specLocalized == '初始' and next(MEETINGSTONE_CHARACTER_DB.SPEC_FILTER) then return false end
+            if classFile then
+                hasBloodlust = hasBloodlust or BLOODLUST_CLASSES[classFile] or false
+                hasBrez      = hasBrez      or BREZ_CLASSES[classFile]      or false
+            end
             -- 职业专精过滤：优先用 classFile+specName 精确匹配，避免同名专精（恢复/奥法等）误筛
             if specLocalized and next(MEETINGSTONE_CHARACTER_DB.SPEC_FILTER) then
                 local specID = (classFile and classSpecNameToId[classFile] and classSpecNameToId[classFile][specLocalized])
@@ -252,6 +254,16 @@ function BrowseFilter:OnInitialize()
                     return false
                 end
             end
+        end
+        -- 嗜血/英勇过滤
+        if MEETINGSTONE_UI_DB.FILTER_BLOODLUST_STATE == 'has'   and not hasBloodlust then return false end
+        if MEETINGSTONE_UI_DB.FILTER_BLOODLUST_STATE == 'needs' and hasBloodlust      then return false end
+        -- 战斗复活过滤
+        if MEETINGSTONE_UI_DB.FILTER_BREZ_STATE == 'has'   and not hasBrez then return false end
+        if MEETINGSTONE_UI_DB.FILTER_BREZ_STATE == 'needs' and hasBrez      then return false end
+        -- 屏蔽只缺嗜血队伍：人数=4 且无嗜血职业
+        if MEETINGSTONE_UI_DB.FILTER_HIDE_ONLY_NEED_BLOODLUST then
+            if activity:GetNumMembers() == 4 and not hasBloodlust then return false end
         end
 
         return activity:Match(...)

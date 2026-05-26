@@ -98,6 +98,14 @@ function BrowsePanel:CreateBlzFilterPanel()
     BlzFilterPanel:SetShown(false)
 
     local enabled = C_LFGList.GetAdvancedFilter()
+    -- 清除可能残留的服务器端职责过滤
+    enabled.hasTank = false
+    enabled.needsTank = false
+    enabled.hasHealer = false
+    enabled.needsHealer = false
+    enabled.hasDamager = false
+    enabled.needsDamager = false
+    C_LFGList.SaveAdvancedFilter(enabled)
     self.MD = {}
 
     local function saveAdvancedFilter()
@@ -109,16 +117,17 @@ function BrowsePanel:CreateBlzFilterPanel()
         enabled.generalPlaystyle2 = true
         enabled.generalPlaystyle3 = true
         enabled.generalPlaystyle4 = true
+        -- 清除服务器端职责过滤，改由本地过滤处理
+        enabled.hasTank = false
+        enabled.needsTank = false
+        enabled.hasHealer = false
+        enabled.needsHealer = false
+        enabled.hasDamager = false
+        enabled.needsDamager = false
         for i = #enabled.activities, 1, -1 do
             if not containsValue(Dungeons, enabled.activities[i]) then
                 table.remove(enabled.activities, i)
             end
-        end
-        if enabled.needsTank and enabled.hasTank then
-            GUI:CallWarningDialog('不能同时选择缺坦克和已有坦克', true, nil)
-        end
-        if enabled.needsHealer and enabled.hasHealer then
-            GUI:CallWarningDialog('不能同时选择缺治疗和已有治疗', true, nil)
         end
         C_LFGList.SaveAdvancedFilter(enabled)
     end
@@ -155,7 +164,7 @@ function BrowsePanel:CreateBlzFilterPanel()
         local Box = Addon:GetClass('FilterBox'):New(BlzFilterPanel.Inset)
         Box.Check:SetText(text)
         Box.MinBox:SetText(min)
-        Box.MinBox:SetMinMaxValues(min, 9999)
+        Box.MinBox:SetMinMaxValues(0, 9999)
         Box.MaxBox:SetText(9999)
         Box.MaxBox:SetMinMaxValues(9999, 9999)
         Box.Text:Hide()
@@ -164,11 +173,6 @@ function BrowsePanel:CreateBlzFilterPanel()
         Box:SetPoint('TOPLEFT', self.MD[index - 1], 'BOTTOMLEFT', 0, -10)
         Box:SetPoint('TOPRIGHT', self.MD[index - 1], 'BOTTOMRIGHT', 0, -10)
         table.insert(self.MD, Box)
-    end
-
-    local function onRoleCheckChanged(box)
-        enabled[box.dataValue] = box.Check:GetChecked()
-        saveAdvancedFilter()
     end
 
     for i, id in ipairs(Dungeons) do
@@ -186,11 +190,93 @@ function BrowsePanel:CreateBlzFilterPanel()
         end)
     end
 
-    createCheckBox(#self.MD + 1, '缺坦克',     enabled.needsTank,    'needsTank',    'OnChanged', onRoleCheckChanged)
-    createCheckBox(#self.MD + 1, '缺治疗',     enabled.needsHealer,  'needsHealer',  'OnChanged', onRoleCheckChanged)
-    createCheckBox(#self.MD + 1, '缺DPS',      enabled.needsDamage,  'needsDamage',  'OnChanged', onRoleCheckChanged)
-    createCheckBox(#self.MD + 1, '已有坦克',   enabled.hasTank,      'hasTank',      'OnChanged', onRoleCheckChanged)
-    createCheckBox(#self.MD + 1, '已有治疗',   enabled.hasHealer,    'hasHealer',    'OnChanged', onRoleCheckChanged)
+    -- 本地职责过滤（替换原 Blizzard API 角色 checkbox）
+    do
+        local inset = BlzFilterPanel.Inset
+        local lastDungeon = self.MD[#self.MD]
+
+        -- 互斥二选一行：[有XXX] [缺XXX]，点击已激活的按鈕可取消
+        local function createRolePair(hasText, needsText, dbKey, anchor, isFirst)
+            local row = CreateFrame('Frame', nil, inset)
+            row:SetHeight(22)
+            row:SetPoint('TOPLEFT',  anchor, 'BOTTOMLEFT',  0, isFirst and -12 or -4)
+            row:SetPoint('TOPRIGHT', anchor, 'BOTTOMRIGHT', 0, isFirst and -12 or -4)
+
+            local hasBtn = CreateFrame('Button', nil, row, 'UIPanelButtonTemplate')
+            hasBtn:SetSize(88, 20)
+            hasBtn:SetPoint('LEFT', 0, 0)
+            hasBtn:SetText(hasText)
+
+            local needsBtn = CreateFrame('Button', nil, row, 'UIPanelButtonTemplate')
+            needsBtn:SetSize(88, 20)
+            needsBtn:SetPoint('LEFT', hasBtn, 'RIGHT', 4, 0)
+            needsBtn:SetText(needsText)
+
+            local function updateState()
+                local state = MEETINGSTONE_UI_DB[dbKey]
+                hasBtn:GetFontString():SetTextColor(
+                    state == 'has' and GREEN_FONT_COLOR.r or 1,
+                    state == 'has' and GREEN_FONT_COLOR.g or 1,
+                    state == 'has' and GREEN_FONT_COLOR.b or 1)
+                needsBtn:GetFontString():SetTextColor(
+                    1,
+                    state == 'needs' and 0.5 or 1,
+                    state == 'needs' and 0   or 1)
+            end
+
+            hasBtn:SetScript('OnClick', function()
+                if MEETINGSTONE_UI_DB[dbKey] == 'has' then
+                    MEETINGSTONE_UI_DB[dbKey] = nil
+                else
+                    MEETINGSTONE_UI_DB[dbKey] = 'has'
+                end
+                updateState()
+                self.ActivityList:Refresh()
+            end)
+            needsBtn:SetScript('OnClick', function()
+                if MEETINGSTONE_UI_DB[dbKey] == 'needs' then
+                    MEETINGSTONE_UI_DB[dbKey] = nil
+                else
+                    MEETINGSTONE_UI_DB[dbKey] = 'needs'
+                end
+                updateState()
+                self.ActivityList:Refresh()
+            end)
+
+            updateState()
+            return row
+        end
+
+        local r1 = createRolePair('有坦克', '缺坦克', 'FILTER_TANK_STATE',      lastDungeon, true)
+        local r2 = createRolePair('有治疗', '缺治疗', 'FILTER_HEALER_STATE',    r1)
+        local r3 = createRolePair('有嗜血', '缺嗜血', 'FILTER_BLOODLUST_STATE', r2)
+        local r4 = createRolePair('有战复', '缺战复', 'FILTER_BREZ_STATE',      r3)
+
+        local dpsBox = Addon:GetClass('CheckBox'):New(inset)
+        dpsBox.Check:SetText('缺输出')
+        if MEETINGSTONE_UI_DB.FILTER_DAMAGE_MPLUS == nil then MEETINGSTONE_UI_DB.FILTER_DAMAGE_MPLUS = false end
+        dpsBox.Check:SetChecked(MEETINGSTONE_UI_DB.FILTER_DAMAGE_MPLUS)
+        dpsBox:SetPoint('TOPLEFT',  r4, 'BOTTOMLEFT',  0, -4)
+        dpsBox:SetPoint('TOPRIGHT', r4, 'BOTTOMRIGHT', 0, -4)
+        dpsBox:SetCallback('OnChanged', function()
+            MEETINGSTONE_UI_DB.FILTER_DAMAGE_MPLUS = not MEETINGSTONE_UI_DB.FILTER_DAMAGE_MPLUS
+            self.ActivityList:Refresh()
+        end)
+        -- 加入 MD 链，让 createFilterBox 能锚定到本行下方
+        table.insert(self.MD, dpsBox)
+
+        local blBox = Addon:GetClass('CheckBox'):New(inset)
+        blBox.Check:SetText('屏蔽只缺嗜血队伍')
+        if MEETINGSTONE_UI_DB.FILTER_HIDE_ONLY_NEED_BLOODLUST == nil then MEETINGSTONE_UI_DB.FILTER_HIDE_ONLY_NEED_BLOODLUST = false end
+        blBox.Check:SetChecked(MEETINGSTONE_UI_DB.FILTER_HIDE_ONLY_NEED_BLOODLUST)
+        blBox:SetPoint('TOPLEFT',  dpsBox, 'BOTTOMLEFT',  0, -4)
+        blBox:SetPoint('TOPRIGHT', dpsBox, 'BOTTOMRIGHT', 0, -4)
+        blBox:SetCallback('OnChanged', function()
+            MEETINGSTONE_UI_DB.FILTER_HIDE_ONLY_NEED_BLOODLUST = not MEETINGSTONE_UI_DB.FILTER_HIDE_ONLY_NEED_BLOODLUST
+            self.ActivityList:Refresh()
+        end)
+        table.insert(self.MD, blBox)
+    end
 
     createFilterBox(#self.MD + 1, LFG_LIST_MINIMUM_RATING, enabled.minimumRating, 'OnChanged', function(box)
         enabled.minimumRating = box.MinBox:GetNumber()
@@ -230,7 +316,7 @@ function BrowsePanel:CreateExSearchButton()
 
     do
         GUI:Embed(ExFilterPanel, 'Refresh')
-        ExFilterPanel:SetSize(200, 180)
+        ExFilterPanel:SetSize(200, 120)
         ExFilterPanel:SetPoint('TOPLEFT', MainPanel, 'TOPRIGHT', 2, -10)
         ExFilterPanel:SetFrameLevel(self.ActivityList:GetFrameLevel() + 15)
         ExFilterPanel:EnableMouse(true)
@@ -263,16 +349,9 @@ function BrowsePanel:CreateExSearchButton()
         end
     end
 
-    createMemberFilter('坦克', 'FILTER_TANK',   '隐藏已有坦克职业的队伍，允许多选', 1)
-    createMemberFilter('治疗', 'FILTER_HEALTH',  '隐藏已有治疗职业的队伍，允许多选', 2)
-    createMemberFilter('输出', 'FILTER_DAMAGE',  '隐藏输出职业满的队伍，允许多选', 3)
-    createMemberFilter('多选-"或"条件', 'FILTER_MULTY',
-        '上方几项多选时，将过滤出同时满足所有条件的队伍\n' ..
-        '而多选的同时再勾选本项后，将过滤出满足勾选的任意一项条件的队伍\n' ..
-        '一般而言，用于玩家想同时以多个职责加入队伍的时候\n' ..
-        '例如战士想查找缺T或DPS的队伍', 4)
-    createMemberFilter('显示屏蔽提示', 'IGNORE_TIPS_LOG',
-        '屏蔽了队长或同标题玩家时，聊天框里显示一次提示信息', 5)
+    createMemberFilter('坦克', 'FILTER_TANK',   '隐藏已有坦克职业的队伍', 1)
+    createMemberFilter('治疗', 'FILTER_HEALTH',  '隐藏已有治疗职业的队伍', 2)
+    createMemberFilter('输出', 'FILTER_DAMAGE',  '隐藏输出职业满的队伍',   3)
 end
 
 -- 初始化所有扩展 UI（由 BrowseFilter:OnInitialize 调用）
