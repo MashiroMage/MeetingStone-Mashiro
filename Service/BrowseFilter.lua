@@ -7,9 +7,9 @@ local LfgService = Addon:GetModule('LfgService')
 local Dungeons
 
 -- 嗜血/英勇职业（本地过滤用）
-local BLOODLUST_CLASSES = { MAGE=true, HUNTER=true, DEMONHUNTER=true, SHAMAN=true }
+local BLOODLUST_CLASSES = { MAGE = true, HUNTER = true, SHAMAN = true, EVOKER = true }
 -- 战斗复活职业（本地过滤用）
-local BREZ_CLASSES = { PALADIN=true, DEATHKNIGHT=true, DRUID=true, WARLOCK=true }
+local BREZ_CLASSES = { PALADIN = true, DEATHKNIGHT = true, DRUID = true, WARLOCK = true }
 
 -- 判断数组是否包含某值，返回 found, index
 local function containsValue(array, value)
@@ -24,7 +24,6 @@ end
 local BrowseFilter = Addon:NewModule('BrowseFilter')
 
 function BrowseFilter:OnInitialize()
-
     if not MEETINGSTONE_UI_DB.IGNORE_LIST then
         MEETINGSTONE_UI_DB.IGNORE_LIST = {}
     end
@@ -49,8 +48,8 @@ function BrowseFilter:OnInitialize()
     end
 
     local classSpecData = {}
-    local specNameToId = {}          -- [specName] = specID  （可能被同名覆盖，仅作兼容保留）
-    local classSpecNameToId = {}     -- [classFile][specName] = specID  （精确匹配）
+    local specNameToId = {}      -- [specName] = specID  （可能被同名覆盖，仅作兼容保留）
+    local classSpecNameToId = {} -- [classFile][specName] = specID  （精确匹配）
     for ci = 1, GetNumClasses() do
         local className, classFile, classID = GetClassInfo(ci)
         local numSpecs = GetNumSpecializationsForClassID(classID)
@@ -125,9 +124,9 @@ function BrowseFilter:OnInitialize()
             end
             local tankState = MEETINGSTONE_UI_DB.FILTER_TANK_STATE
             local healState = MEETINGSTONE_UI_DB.FILTER_HEALER_STATE
-            if tankState == 'has'   and data.TANK   <  tcount then return false end
-            if tankState == 'needs' and data.TANK   >= tcount then return false end
-            if healState == 'has'   and data.HEALER <  hcount then return false end
+            if tankState == 'has' and data.TANK < tcount then return false end
+            if tankState == 'needs' and data.TANK >= tcount then return false end
+            if healState == 'has' and data.HEALER < hcount then return false end
             if healState == 'needs' and data.HEALER >= hcount then return false end
             if MEETINGSTONE_UI_DB.FILTER_DAMAGE_MPLUS and data.DAMAGER >= dcount then return false end
             return true
@@ -162,7 +161,9 @@ function BrowseFilter:OnInitialize()
         if BrowsePanel.IgnoreLeaderOnly[leader] then
             local notInList = true
             for _, v in ipairs(MEETINGSTONE_UI_DB.IGNORE_LIST) do
-                if v.leader == leader then notInList = false; break end
+                if v.leader == leader then
+                    notInList = false; break
+                end
             end
             if notInList then
                 table.insert(MEETINGSTONE_UI_DB.IGNORE_LIST, 1, {
@@ -244,23 +245,23 @@ function BrowseFilter:OnInitialize()
             if specLocalized == '初始' and next(MEETINGSTONE_CHARACTER_DB.SPEC_FILTER) then return false end
             if classFile then
                 hasBloodlust = hasBloodlust or BLOODLUST_CLASSES[classFile] or false
-                hasBrez      = hasBrez      or BREZ_CLASSES[classFile]      or false
+                hasBrez      = hasBrez or BREZ_CLASSES[classFile] or false
             end
             -- 职业专精过滤：优先用 classFile+specName 精确匹配，避免同名专精（恢复/奥法等）误筛
             if specLocalized and next(MEETINGSTONE_CHARACTER_DB.SPEC_FILTER) then
                 local specID = (classFile and classSpecNameToId[classFile] and classSpecNameToId[classFile][specLocalized])
-                               or specNameToId[specLocalized]
+                    or specNameToId[specLocalized]
                 if specID and MEETINGSTONE_CHARACTER_DB.SPEC_FILTER[specID] == false then
                     return false
                 end
             end
         end
         -- 嗜血/英勇过滤
-        if MEETINGSTONE_UI_DB.FILTER_BLOODLUST_STATE == 'has'   and not hasBloodlust then return false end
-        if MEETINGSTONE_UI_DB.FILTER_BLOODLUST_STATE == 'needs' and hasBloodlust      then return false end
+        if MEETINGSTONE_UI_DB.FILTER_BLOODLUST_STATE == 'has' and not hasBloodlust then return false end
+        if MEETINGSTONE_UI_DB.FILTER_BLOODLUST_STATE == 'needs' and hasBloodlust then return false end
         -- 战斗复活过滤
-        if MEETINGSTONE_UI_DB.FILTER_BREZ_STATE == 'has'   and not hasBrez then return false end
-        if MEETINGSTONE_UI_DB.FILTER_BREZ_STATE == 'needs' and hasBrez      then return false end
+        if MEETINGSTONE_UI_DB.FILTER_BREZ_STATE == 'has' and not hasBrez then return false end
+        if MEETINGSTONE_UI_DB.FILTER_BREZ_STATE == 'needs' and hasBrez then return false end
         -- 屏蔽只缺嗜血队伍：人数=4 且无嗜血职业
         if MEETINGSTONE_UI_DB.FILTER_HIDE_ONLY_NEED_BLOODLUST then
             if activity:GetNumMembers() == 4 and not hasBloodlust then return false end
@@ -294,12 +295,13 @@ function BrowseFilter:OnInitialize()
         if not resultid or status ~= 'inviteaccepted' then return end
         local info = C_LFGList.GetSearchResultInfo(resultid)
         local activityID
-        for _, v in pairs(info.activityIDs) do activityID = v; break end
+        for _, v in pairs(info.activityIDs) do
+            activityID = v; break
+        end
         if not activityID then return end
         local name = C_LFGList.GetActivityFullName(activityID) or '未知活动'
         print('>>>> 队伍详情：' .. name .. ' - ' .. (title or ''))
     end)
 
     BrowsePanel:InitExtension()
-
 end
