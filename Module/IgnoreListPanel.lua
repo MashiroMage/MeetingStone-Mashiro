@@ -69,6 +69,13 @@ function IgnoreListPanel:OnInitialize()
     IgnoreList:SetItemList(MEETINGSTONE_UI_DB.IGNORE_LIST)
     self.IgnoreList = IgnoreList
 
+    self:SetScript('OnShow', function()
+        -- BrowseFilter:OnInitialize 晚于本模块加载，首次登录时 IGNORE_LIST 可能尚未初始化
+        -- 或后续新增屏蔽后列表引用需要同步，故每次显示时重新绑定并刷新
+        self.IgnoreList:SetItemList(MEETINGSTONE_UI_DB.IGNORE_LIST)
+        self.IgnoreList:Refresh()
+    end)
+
 
     local RemoveIgnore = CreateFrame('Button', nil, self, 'UIPanelButtonTemplate')
     do

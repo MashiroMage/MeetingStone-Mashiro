@@ -1,6 +1,6 @@
-## Interface: 120005
-## Version: 1.0.1
-## VersionDate: 20260525
+## Interface: 120007
+## Version: 1.0.2
+## VersionDate: 20260618
 ## Title: Meeting Stone - Mashiro
 ## Title-zhCN: 集合石 真白版
 ## Title-zhTW: 集合石 真白版

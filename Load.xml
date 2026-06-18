@@ -8,17 +8,19 @@
     <Script file="Data\Custom.lua"/>  <!-- Static game data tables (must load before Constants.lua) -->
     <Script file="Data\Constants.lua"/>    <!-- Addon config constants (applies setmetatable to Custom.lua tables) -->
 
-    <!-- ====== Utility / Cross-cutting ====== -->
+    <!-- ====== Utility / Cross-cutting (no Addon dependency) ====== -->
     <Script file="Core\Memorize.lua"/> <!-- Memoization helper -->
-    <Script file="Core\Throttle.lua"/>  <!-- Request throttling helper -->
     <Script file="Core\API.lua"/>      <!-- Shared utilities (player, activity, serialization, UI hooks) -->
-    <Script file="Core\Hooks.lua"/>    <!-- LFG UI hooks: class/spec icon replacement (InitMeetingStoneClass) -->
 
     <Script file="Data\AppData.lua"/> <!-- Static app data tables (depends on ListToMap from API.lua) -->
 
     <!-- ====== Addon Initialization ====== -->
     <Script file="Core\Main.lua"/>
     <Script file="Core\Profile.lua"/> <!-- SavedVariables / user settings -->
+
+    <!-- ====== Utility / Cross-cutting (requires Addon) ====== -->
+    <Script file="Core\Throttle.lua"/>  <!-- Request throttling helper (depends on Addon:NewClass) -->
+    <Script file="Core\Hooks.lua"/>    <!-- LFG UI hooks: class/spec icon replacement (InitMeetingStoneClass) -->
 
     <!-- ====== Data Layer (model classes, requires Addon) ====== -->
     <Include file="Data\Data.xml"/>

@@ -32,7 +32,7 @@ local function Deserialize(self, ok, ...)
         local checker = v.checker
 
         if not v.checker(value) then
-            debug('invalid', v.key, value)
+            MS_debug('invalid', v.key, value)
             return true, false
         end
         self._args[i] = value
@@ -75,11 +75,11 @@ end
 
 function Serializer:Deserialize(data)
     if data:find('%^[ZBbTt][^^]') then
-        debug('invalid data', data)
+        MS_debug('invalid data', data)
         return
     end
     if data:find('%^%^.') then
-        debug('invalid data', data)
+        MS_debug('invalid data', data)
         return
     end
 

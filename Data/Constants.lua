@@ -10,7 +10,7 @@ ADDON_LOGO = [[Interface\AddOns\]] .. ADDON_NAME .. [[\Media\Logo]]
 ADDON_VERSION = C_AddOns.GetAddOnMetadata(ADDON_NAME, 'Version')
 ADDON_VERSION_DATE = C_AddOns.GetAddOnMetadata(ADDON_NAME, 'VersionDate')
 ADDON_VERSION_SHORT = ADDON_VERSION:gsub('(%d)%d(%d)%d%d%.(%d%d)', '%1%2%3')
-ADDON_REGIONSUPPORT = GetCurrentRegion() == 5 or true
+ADDON_REGIONSUPPORT = GetCurrentRegion() == 5
 ADDON_SERVER = (NETEASE_SERVER_PREFIX or 'S1') .. UnitFactionGroup('player')
 SERVER_TIMEOUT = 120
 NO_SCAN_WORD = true
@@ -392,6 +392,8 @@ CATEGORY = {
             [415] = true, -- 黑暗回廊
 
             [408] = true, -- 磨难高地
+
+            [422] = true, -- 孢陨幽境
         },
         activities = {
             [1735] = true, -- 世界首领
