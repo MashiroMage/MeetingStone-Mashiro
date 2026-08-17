@@ -31,7 +31,10 @@ function BrowseFilter:OnInitialize()
     if MEETINGSTONE_CHARACTER_DB.Remix then
         Dungeons = { 127, 128, 112, 114, 115, 120, 113, 117, 118, 121, 119, 129, 133 }
     else
-        Dungeons = { 370, 399, 400, 401, 9, 52, 133, 302 }
+        -- 12.1 S2 大秘境轮换（2026-08-20）
+        -- 毒牙祭坛(420), 夺目谷(382), 密谋小径(396), 虚空之痕竞技场(398),
+        -- 纳洛拉克的洞穴(392), 红玉新生法池(306), 诸王之眠(141), 塞塔里斯神庙(139)
+        Dungeons = { 420, 382, 396, 398, 392, 306, 141, 139 }
     end
     -- 暴露给 BrowseFilterUI 使用
     BrowseFilter.Dungeons = Dungeons

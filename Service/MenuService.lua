@@ -443,7 +443,11 @@ function ListOfDungeons(menuType)
 
     --local Dungeons = C_LFGList.GetAvailableActivityGroups(GROUP_FINDER_CATEGORY_ID_DUNGEONS, bit.bor(Enum.LFGListFilter.CurrentSeason, Enum.LFGListFilter.PvE))
     --C_ChallengeMode.GetMapTable()
-    local  Dungeons = {370,399,400,401,9,52,133,302}--{ 396, 370,382,392, 398, 399, 400 ,401}
+    -- 12.1 S2 大秘境轮换（2026-08-20）
+    -- 毒牙祭坛(420), 夺目谷(382), 密谋小径(396), 虚空之痕竞技场(398),
+    -- 纳洛拉克的洞穴(392), 红玉新生法池(306), 诸王之眠(141), 塞塔里斯神庙(139)
+    local Dungeons = { 420, 382, 396, 398, 392, 306, 141, 139 }
+    --local Dungeons = {370,399,400,401,9,52,133,302}  -- 11.0 S1
     --C_LFGList.GetAvailableActivities(2,396)
     --local  Activitys = {1751,1541,1701,1723,1756,1759,1763,1767}--{1284,1281,1285,1550,1694,699,1016,1017}
  
